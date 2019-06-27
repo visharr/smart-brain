@@ -2,8 +2,8 @@ import React, { Component } from 'react';
 import './SignIn.css'
 
 class SignIn extends Component {
-    constructor(props) {
-        super(props);
+    constructor() {
+        super();
         this.state = {
             signInEmail: '',
             signInPassword: ''
@@ -11,7 +11,7 @@ class SignIn extends Component {
     }
 
     onSubmitSignIn = () => {
-        fetch('https://fast-eyrie-35897.herokuapp.com/signin', {
+        fetch('https://fast-eyrie-35897.herokuapp.com/' + 'signin', {
             method: 'post',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
@@ -19,14 +19,24 @@ class SignIn extends Component {
                 password: this.state.signInPassword
             })
         }).then(respsonse => respsonse.json())
-            .then(user => {
-                if (user.id) {
-                    this.props.loadUser(user);
-                    this.props.onRouteChange('home');
+            .then(data => {
+                if (data.token && data.success === 'true') {
+                    fetch('https://fast-eyrie-35897.herokuapp.com' + '/profile', {
+                        method: 'get',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'Authorization': data.token
+                        }
+                    })
+                        .then(response => response.json())
+                        .then(user => {
+                            this.props.loadUser(user);
+                            this.props.onRouteChange('home');
+                            this.saveAuthTokenInSession(data.token);
+                        })
                 }
-            }).catch(err => {
-                console.log(err);
-            });
+            })
+            .catch(err => console.log('error signing in'));
 
     }
 
@@ -36,6 +46,10 @@ class SignIn extends Component {
 
     onPasswordChange = (event) => {
         this.setState({ signInPassword: event.target.value })
+    }
+
+    saveAuthTokenInSession = (token) => {
+        window.sessionStorage.setItem('token', token);
     }
 
     render() {

@@ -8,6 +8,7 @@ import FaceRecognition from './components/FaceRecognition/FaceRecognition';
 import Logo from './components/Logo/Logo';
 import ImageLinkForm from './components/ImageLinkForm/ImageLinkForm';
 import Rank from './components/Rank/Rank';
+
 import './App.css';
 
 const praticesOptions = {
@@ -59,17 +60,32 @@ class App extends Component {
     })
   }
 
-  // componentDidMount() {
-  //   fetch('http://localhost:3000')
-  //     .then(response => response.json())
-  //     .then();
-  // }
+  componentDidMount() {
+    const token = window.sessionStorage.getItem('token');
+    if (token) {
+      fetch('https://fast-eyrie-35897.herokuapp.com' + '/profile', {
+        method: 'get',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': token
+        }
+      })
+        .then(res => res.json())
+        .then(data => {
+          if (data && data.id) {
+            this.loadUser(data);
+            this.onRouteChange('home');
+          }
+        })
+    }
+  }
 
   onRouteChange = (route) => {
     if (route === 'home') {
       this.setState({ isSignedIn: true });
     }
     else if (route === 'signout') {
+      window.sessionStorage.removeItem('token');
       this.setState(initialState);
     }
 
@@ -79,8 +95,6 @@ class App extends Component {
   calculateFaceLoction = (data) => {
 
     const regions = data.outputs[0].data.regions;
-
-    console.log(regions);
 
     return regions.map(region => {
       const clarifaiFace = region.region_info.bounding_box;
@@ -94,16 +108,6 @@ class App extends Component {
         bottomRow: height - (clarifaiFace.bottom_row * height)
       }
     });
-    // [0].region_info.bounding_box;
-    // const image = document.getElementById('inputimage');
-    // const width = Number(image.width);
-    // const height = Number(image.height);
-    // return {
-    //   leftCol: clarifyFace.left_col * width,
-    //   topRow: clarifyFace.top_row * height,
-    //   rightCol: width - (clarifyFace.right_col * width),
-    //   bottomRow: height - (clarifyFace.bottom_row * height)
-    // }
   }
 
   displayFaceboxes = (boxes) => {
@@ -115,11 +119,13 @@ class App extends Component {
   }
 
   onButtonSubmit = () => {
+    const token = window.sessionStorage.getItem('token');
     this.setState({ imageUrl: this.state.input });
     fetch('https://fast-eyrie-35897.herokuapp.com/imageurl', {
       method: 'post',
       headers: {
-        'Content-Type': 'application/json'
+        'Content-Type': 'application/json',
+        'Authorization': token
       },
       body: JSON.stringify({
         input: this.state.input
@@ -129,10 +135,11 @@ class App extends Component {
       .then(
         response => {
           if (response) {
-            fetch('https://fast-eyrie-35897.herokuapp.com/image', {
+            fetch('https://fast-eyrie-35897.herokuapp.com' + '/image', {
               method: 'put',
               headers: {
-                'Content-Type': 'application/json'
+                'Content-Type': 'application/json',
+                'Authorization': token
               },
               body: JSON.stringify({
                 id: this.state.user.id
@@ -167,9 +174,10 @@ class App extends Component {
               onButtonSubmit={this.onButtonSubmit} />
             <FaceRecognition boxes={boxes} imageUrl={imageUrl} />
           </div >
-          : (route === 'signin' ?
-            <SignIn loadUser={this.loadUser} onRouteChange={this.onRouteChange} />
-            : <Register loadUser={this.loadUser} onRouteChange={this.onRouteChange} />
+          : (route === 'register' ?
+            <Register loadUser={this.loadUser} onRouteChange={this.onRouteChange} />
+            : <SignIn loadUser={this.loadUser} onRouteChange={this.onRouteChange} />
+
           )
         }
       </div >
